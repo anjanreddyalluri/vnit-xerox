@@ -76,6 +76,3 @@ Xerox/
     ├── server.js             # Main Express server and API routes
     └── package.json          
 ```
-
-## 🤝 Author
-**Alluri Anjan Reddy** B.Tech ECE, Visvesvaraya National Institute of Technology (VNIT), Nagpur
