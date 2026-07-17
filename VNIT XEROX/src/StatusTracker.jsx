@@ -12,7 +12,7 @@ function StatusTracker() {
     setErrorMsg('');
     
     try {
-      const res = await fetch(`http://localhost:5001/api/orders/status/${code}`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/orders/status/${code}`);
       const data = await res.json();
       
       if (data) {
@@ -34,7 +34,7 @@ function StatusTracker() {
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`http://localhost:5001/api/orders/status/${activeSearchCode}`);
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/orders/status/${activeSearchCode}`);
         const data = await res.json();
         if (data) {
           setOrder(data);

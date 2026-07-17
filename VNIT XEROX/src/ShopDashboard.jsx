@@ -8,11 +8,11 @@ function ShopDashboard() {
 
   const fetchData = async () => {
     try {
-      const resOrders = await fetch('http://localhost:5001/api/orders');
+      const resOrders = await fetch(`${import.meta.env.VITE_API_URL}/api/orders`);
       const dataOrders = await resOrders.json();
       setOrders(dataOrders);
 
-      const resShop = await fetch('http://localhost:5001/api/shop/status');
+      const resShop = await fetch(`${import.meta.env.VITE_API_URL}/api/shop/status`);
       const dataShop = await resShop.json();
       setIsShopOpen(dataShop.isOpen);
     } catch (err) {
@@ -38,7 +38,7 @@ function ShopDashboard() {
 
   const updateStatus = async (id, newStatus) => {
     try {
-      await fetch(`http://localhost:5001/api/orders/${id}`, {
+      await fetch(`${import.meta.env.VITE_API_URL}/api/orders/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
@@ -51,7 +51,7 @@ function ShopDashboard() {
 
   const toggleShop = async () => {
     try {
-      const res = await fetch('http://localhost:5001/api/shop/toggle', { method: 'POST' });
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/shop/toggle`, { method: 'POST' });
       const data = await res.json();
       setIsShopOpen(data.isOpen);
     } catch (err) {
@@ -176,7 +176,7 @@ function ShopDashboard() {
                 {/* 📄 PDF Button */}
                 {order.pdfUrl && (
                   <a 
-                    href={`http://localhost:5001/uploads/${order.pdfUrl}`} 
+                    href={`${import.meta.env.VITE_API_URL}/uploads/${order.pdfUrl}`} 
                     target="_blank" 
                     rel="noreferrer"
                     style={{ 
@@ -202,7 +202,7 @@ function ShopDashboard() {
                 {/* 💸 View Screenshot Modal Trigger */}
                 {order.paymentScreenshotUrl && (
                   <button 
-                    onClick={() => setScreenshotModalUrl(`http://localhost:5001/uploads/${order.paymentScreenshotUrl}`)}
+                    onClick={() => setScreenshotModalUrl(`${import.meta.env.VITE_API_URL}/uploads/${order.paymentScreenshotUrl}`)}
                     style={{ 
                       padding: '10px', 
                       backgroundColor: 'rgba(16, 185, 129, 0.1)', 

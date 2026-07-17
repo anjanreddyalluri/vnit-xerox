@@ -17,7 +17,7 @@ function OrderForm() {
   const totalPrice = copies * pricePerCopy;
 
   useEffect(() => {
-    fetch('http://localhost:5001/api/shop/status')
+    fetch(`${import.meta.env.VITE_API_URL}/api/shop/status`)
       .then(res => res.json())
       .then(data => setIsShopOpen(data.isOpen))
       .catch(err => console.error(err));
@@ -58,7 +58,7 @@ function OrderForm() {
     formData.append('paymentScreenshot', paymentScreenshot); 
 
     try {
-        const response = await fetch('http://localhost:5001/api/orders', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/orders`, {
             method: 'POST',
             body: formData, 
         });
