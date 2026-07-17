@@ -1,113 +1,117 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 
-function PaymentSection({ totalPrice, onFinalSubmit, isSubmitting }) {
+function PaymentSection({ totalPrice, onFinalSubmit, isSubmitting, onBack }) {
   const [screenshot, setScreenshot] = useState(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const fileInputRef = useRef(null);
 
-  const handleFinalSubmit = () => {
+  const handleFinalSubmit = (e) => {
+    e.preventDefault();
     if (!screenshot) {
       alert("Hold up! Please upload your payment screenshot before submitting.");
+      return;
+    }
+    if (screenshot.size > 10 * 1024 * 1024) {
+      alert("Screenshot is too large! Please upload an image under 10MB.");
       return;
     }
     onFinalSubmit(screenshot); 
   };
 
-  const onDragOver = (e) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const onDragLeave = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const onDrop = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      setScreenshot(e.dataTransfer.files[0]);
-    }
-  };
-
   return (
-    <div className="animate-fade-in" style={{ textAlign: 'center' }}>
-      
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '1.5rem' }}>
-        <div style={{ backgroundColor: 'var(--success)', color: 'white', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>2</div>
-        <h2 style={{ margin: 0, color: 'var(--text-main)' }}>Payment</h2>
+    <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+        <button 
+          onClick={onBack}
+          className="btn btn-outline"
+          style={{ width: 'auto', padding: '8px 12px', fontSize: '14px', cursor: 'pointer', border: 'none', background: 'transparent' }}
+          title="Back to Form"
+          type="button"
+          id="payment-back-btn"
+        >
+          ← Back
+        </button>
+        <h2 style={{ 
+          fontFamily: "'Outfit', sans-serif", 
+          fontWeight: 800, 
+          color: 'var(--light-text)', 
+          margin: 0,
+          marginLeft: '10px',
+          fontSize: '1.6rem'
+        }}>
+          UPI Payment
+        </h2>
       </div>
 
-      <p style={{ color: 'var(--text-muted)', fontSize: '1.125rem', marginBottom: '1.5rem' }}>
-        Please pay <strong style={{ color: 'var(--text-main)', fontSize: '1.25rem' }}>₹{totalPrice}</strong> to complete your order.
+      <p style={{ color: 'var(--light-text-muted)', fontSize: '15px', marginBottom: '20px' }}>
+        Please transfer <strong>₹{totalPrice}</strong> to the campus xerox shop. Scan the QR code below using GPay, PhonePe, or Paytm.
       </p>
 
-      <div style={{ margin: '0 auto 2rem', padding: '1rem', border: '1px solid var(--border-color)', width: '220px', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--surface)', boxShadow: 'var(--shadow-md)' }}>
+      {/* QR Code Container */}
+      <div style={{ 
+        margin: '20px auto', 
+        padding: '16px', 
+        border: '1px solid var(--light-border)', 
+        maxWidth: '240px', 
+        borderRadius: '12px', 
+        backgroundColor: '#ffffff',
+        boxShadow: 'var(--shadow-sm)',
+        textAlign: 'center'
+      }} id="upi-qr-card">
         <img 
-          src="/qr.jpg" 
+          src="http://localhost:5001/uploads/qr.jpg" 
           alt="VNIT Xerox UPI QR Code" 
-          style={{ width: '100%', borderRadius: 'var(--radius-sm)', display: 'block' }} 
-          onError={(e) => { e.target.src = "https://placehold.co/200x200?text=QR+Code" }}
+          style={{ width: '100%', borderRadius: '8px', objectFit: 'contain' }} 
+          onError={(e) => { 
+            // Fallback if qr.jpg is not found at uploads
+            e.target.src = "/qr.jpg";
+            e.target.onerror = (err) => {
+              e.target.src = "https://placehold.co/200x200?text=Scan+to+Pay";
+            };
+          }}
         />
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '1rem' }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--success)' }}><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-          <span style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-main)' }}>UPI Accepted</span>
-        </div>
-      </div>
-
-      <div 
-        className={`form-group ${isDragging ? 'drag-active' : ''}`} 
-        style={{ 
-          padding: '2rem 1.5rem', 
-          backgroundColor: 'var(--bg-color)', 
-          border: '2px dashed var(--border-color)', 
-          borderRadius: 'var(--radius-md)', 
-          textAlign: 'center', 
-          transition: 'all 0.2s ease',
-          cursor: 'pointer',
-          marginBottom: '1.5rem'
-        }}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
-        onClick={() => fileInputRef.current.click()}
-      >
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '10px', opacity: isDragging ? 1 : 0.7 }}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-        <label className="form-label" style={{ marginBottom: '0.5rem', cursor: 'pointer' }}>
-          {screenshot ? screenshot.name : "Drag & Drop or Click to Upload Payment Screenshot"}
-        </label>
-        <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-          {screenshot ? `Size: ${(screenshot.size / 1024 / 1024).toFixed(2)} MB` : "Supports .jpg, .png"}
+        <p style={{ margin: '12px 0 0 0', fontWeight: 700, color: 'var(--light-text)', fontSize: '14px' }}>
+          Scan via UPI Apps
         </p>
-        <input 
-          type="file" 
-          accept="image/*" 
-          onChange={(e) => setScreenshot(e.target.files[0])}
-          ref={fileInputRef}
-          style={{ display: 'none' }} 
-        />
       </div>
 
-      <button 
-        onClick={handleFinalSubmit}
-        className="btn btn-success w-full"
-        style={{ padding: '1rem', fontSize: '1.125rem' }}
-        disabled={isSubmitting}
-      >
-        {isSubmitting ? (
-          <>
-            <svg className="animate-spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
-            Submitting...
-          </>
-        ) : (
-          <>
-            Submit Print Job
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '8px' }}><polyline points="20 6 9 17 4 12"/></svg>
-          </>
-        )}
-      </button>
+      {/* Screenshot Proof Upload */}
+      <form onSubmit={handleFinalSubmit}>
+        <div className="form-group">
+          <span className="form-label">Upload Payment Screenshot</span>
+          <div className="file-upload-zone" id="screenshot-upload-zone" style={{ borderStyle: 'solid', borderColor: '#2e7d32', backgroundColor: 'rgba(46, 125, 50, 0.05)' }}>
+            <span className="file-upload-icon" style={{ filter: 'grayscale(0)' }}>💸</span>
+            <span className="file-upload-text" style={{ wordBreak: 'break-all', display: 'block', padding: '0 10px', color: 'var(--success-text)' }}>
+              {screenshot ? screenshot.name : "Choose payment proof image"}
+            </span>
+            <span className="file-upload-subtext">
+              {screenshot ? `${(screenshot.size / (1024 * 1024)).toFixed(2)} MB` : "Take screenshot of success screen"}
+            </span>
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={(e) => setScreenshot(e.target.files[0])}
+              required
+              id="screenshot-file-input"
+            />
+          </div>
+        </div>
 
+        <button 
+          type="submit"
+          className="btn btn-success"
+          disabled={isSubmitting}
+          id="submit-print-job-btn"
+          style={{ padding: '14px', fontSize: '16px' }}
+        >
+          {isSubmitting ? (
+            <>
+              <span className="spinner"></span>
+              Submitting Order...
+            </>
+          ) : (
+            'Submit Print Job'
+          )}
+        </button>
+      </form>
     </div>
   );
 }

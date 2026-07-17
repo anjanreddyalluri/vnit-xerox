@@ -3,82 +3,31 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const multer = require('multer');
-const rateLimit = require('express-rate-limit');
-const { CloudinaryStorage } = require('multer-storage-cloudinary'); // ✅ Cloudinary added
-const cloudinary = require('cloudinary').v2; // ✅ Cloudinary added
+const path = require('path');
 const Order = require('./models/Order');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// 🔒 CORS Configuration
-const allowedOrigins = [
-  'http://localhost:5173',
-  process.env.FRONTEND_URL
-].filter(Boolean);
-
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  }
-}));
-
+app.use(cors());
 app.use(express.json());
 
-// 🛡️ Rate Limiting for Orders
-const orderLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 5, // limit each IP to 5 requests per windowMs
-  message: { message: "Too many print requests from this IP, please try again after 10 minutes." }
-});
+const crypto = require('crypto');
 
-// ✅ Cloudinary Configuration
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
-});
-
-// 📁 Cloudinary Storage Setup
-const storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
-        folder: 'XeroxIt_Files',
-        resource_type: 'auto' 
+// 📁 Multer setup
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, 'uploads/'),
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        cb(null, crypto.randomUUID() + ext); // Secure, unpredictable filenames
     }
 });
-
-// 🛡️ Strict File Filtering (Kept from your AI update)
-const fileFilter = (req, file, cb) => {
-    if (file.fieldname === 'pdfFile') {
-        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
-        if (allowedTypes.includes(file.mimetype)) {
-            cb(null, true);
-        } else {
-            cb(new Error('Only .pdf, .jpg, and .png files are allowed for documents.'));
-        }
-    } else if (file.fieldname === 'paymentScreenshot') {
-        const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-        if (allowedImageTypes.includes(file.mimetype)) {
-            cb(null, true);
-        } else {
-            cb(new Error('Only .jpg, .jpeg, and .png files are allowed for screenshots.'));
-        }
-    } else {
-        cb(new Error('Unexpected file field.'));
-    }
-};
-
 const upload = multer({ 
-    storage, 
-    fileFilter,
-    limits: { fileSize: 15 * 1024 * 1024 } // 15MB hard limit
+    storage,
+    limits: { fileSize: 10 * 1024 * 1024 } // 10MB strict limit
 });
-
+app.use('/uploads', express.static('uploads'));
+console.log(process.env.MONGO_URI);
 // 🔗 MongoDB connection
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log("🟢 Connected to MongoDB"))
@@ -101,18 +50,11 @@ app.post('/api/shop/toggle', async (req, res) => {
     res.json({ isOpen: settings.isOpen });
 });
 
-// ✅ CREATE ORDER (Cloudinary URL extraction)
-app.post('/api/orders', orderLimiter, (req, res, next) => {
-    upload.fields([
-        { name: 'pdfFile', maxCount: 1 }, 
-        { name: 'paymentScreenshot', maxCount: 1 }
-    ])(req, res, (err) => {
-        if (err) {
-            return res.status(400).json({ message: err.message });
-        }
-        next();
-    });
-}, async (req, res) => {
+// ✅ CREATE ORDER (Now accepts TWO files)
+app.post('/api/orders', upload.fields([
+    { name: 'pdfFile', maxCount: 1 }, 
+    { name: 'paymentScreenshot', maxCount: 1 }
+]), async (req, res) => {
     try {
         const settings = await ShopSettings.findOne();
         if (settings && !settings.isOpen) {
@@ -120,19 +62,29 @@ app.post('/api/orders', orderLimiter, (req, res, next) => {
         }
 
         const { studentName, copies, isColor, totalPaid } = req.body;
-        const pickupCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+        
+        // Secure, collision-free code generation
+        let pickupCode;
+        let isUnique = false;
+        while (!isUnique) {
+            pickupCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+            if (pickupCode.length === 4) {
+                const existing = await Order.findOne({ pickupCode });
+                if (!existing) isUnique = true;
+            }
+        }
 
-        // ⚠️ Grab the full Cloudinary URL (.path instead of .filename)
-        const pdfUrl = req.files && req.files['pdfFile'] ? req.files['pdfFile'][0].path : null;
-        const paymentScreenshotUrl = req.files && req.files['paymentScreenshot'] ? req.files['paymentScreenshot'][0].path : null;
+        // Safely extract both filenames if they exist
+        const pdfFilename = req.files && req.files['pdfFile'] ? req.files['pdfFile'][0].filename : null;
+        const paymentFilename = req.files && req.files['paymentScreenshot'] ? req.files['paymentScreenshot'][0].filename : null;
 
         const newOrder = new Order({
             studentName,
             copies,
             isColor,
             totalPaid,
-            pdfUrl: pdfUrl,
-            paymentScreenshotUrl: paymentScreenshotUrl,
+            pdfUrl: pdfFilename,
+            paymentScreenshotUrl: paymentFilename, // Save payment image
             pickupCode
         });
 
@@ -183,17 +135,7 @@ app.get('/api/orders/status/:code', async (req, res) => {
     }
 });
 
-// ⚠️ DELETE ALL (For Testing)
-app.delete('/api/orders/clear', async (req, res) => {
-    try {
-        await Order.deleteMany({});
-        res.json({ message: "All orders permanently deleted!" });
-    } catch (error) {
-        res.status(500).json({ message: "Failed to clear orders" });
-    }
-});
-
 // 🚀 START SERVER
 app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
 });

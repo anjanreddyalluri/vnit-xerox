@@ -2,70 +2,63 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import OrderForm from './OrderForm';
 import StatusTracker from './StatusTracker';
-import ShopDashboard from './ShopDashboard';
-import ErrorBoundary from './ErrorBoundary';
+import ShopDashboard from './ShopDashboard'; 
 
 function App() {
   return (
-    <ErrorBoundary>
-      <Router>
-        <Routes>
-          <Route path="/" element={
-            <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-color)' }}>
-              
-              {/* Header */}
-              <header style={{ 
-                backgroundColor: 'var(--surface)', 
-                padding: '1.5rem 2rem', 
-                boxShadow: 'var(--shadow-sm)',
-                position: 'sticky',
-                top: 0,
-                zIndex: 10,
-                borderBottom: '1px solid var(--border-color)'
+    <Router>
+      <Routes>
+        <Route path="/" element={
+          <div style={{ padding: '40px 20px', maxWidth: '1200px', margin: '0 auto' }}>
+            <header style={{ textAlign: 'center', marginBottom: '40px', animation: 'fadeIn 0.5s ease-out' }}>
+              <img 
+                src="/logo.png" 
+                alt="XeroxIt Logo" 
+                style={{ height: '100px', marginBottom: '10px', objectFit: 'contain' }} 
+                onError={(e) => { e.target.style.display = 'none'; e.target.nextElementSibling.style.display = 'block'; }}
+              />
+              <h1 style={{ 
+                display: 'none', 
+                fontFamily: "'Outfit', sans-serif", 
+                fontSize: '2.8rem', 
+                fontWeight: 800, 
+                color: 'var(--primary)', 
+                marginBottom: '10px'
               }}>
-                <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <img src="/Profile.png" alt="XeroxIt Logo" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
-                  <img src="/Text.png" alt="XeroxIt" style={{ height: '28px', objectFit: 'contain' }} />
-                </div>
-              </header>
-
-              {/* Main Content */}
-              <main style={{ flex: 1, padding: '3rem 1.5rem' }}>
-                <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                  
-                  <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-                    <h2 style={{ fontSize: '3rem', fontWeight: '800', color: 'var(--text-main)', marginBottom: '1rem', letterSpacing: '-0.025em' }}>
-                      Skip the line. Print online.
-                    </h2>
-                    <p style={{ fontSize: '1.125rem', color: 'var(--text-muted)', maxWidth: '600px', margin: '0 auto' }}>
-                      Upload your documents, pay securely via UPI, and pick them up instantly at the campus store.
-                    </p>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '2rem', alignItems: 'start' }}>
-                    <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
-                      <OrderForm />
-                    </div>
-                    <div className="animate-fade-in" style={{ animationDelay: '0.2s' }}>
-                      <StatusTracker />
-                    </div>
-                  </div>
-
-                </div>
-              </main>
-
-              {/* Footer */}
-              <footer style={{ backgroundColor: 'var(--surface)', padding: '2rem', textAlign: 'center', borderTop: '1px solid var(--border-color)', marginTop: 'auto' }}>
-                <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-muted)' }}>&copy; {new Date().getFullYear()} XeroxIt. Digitizing campus life.</p>
-              </footer>
-
+                XeroxIt
+              </h1>
+              <p style={{ color: 'var(--light-text-muted)', fontSize: '1.2rem', fontWeight: 600, maxWidth: '600px', margin: '0 auto', letterSpacing: '0.5px' }}>
+                Print Without Waiting.
+              </p>
+            </header>
+            
+            {/* Mobile Responsive Grid */}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
+              gap: '30px', 
+              justifyContent: 'center', 
+              alignItems: 'start',
+              maxWidth: '1000px',
+              margin: '0 auto'
+            }}>
+              <div className="glass-container">
+                <OrderForm />
+              </div>
+              <div className="glass-container">
+                <StatusTracker />
+              </div>
             </div>
-          } />
-          
-          <Route path="/shop" element={<ShopDashboard />} />
-        </Routes>
-      </Router>
-    </ErrorBoundary>
+            
+            <footer style={{ marginTop: '60px', textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem' }}>
+              <p>© 2026 VNIT Campus Print System. Fast, paperless, and digitized.</p>
+            </footer>
+          </div>
+        } />
+        
+        <Route path="/shop" element={<ShopDashboard />} />
+      </Routes>
+    </Router>
   );
 }
 

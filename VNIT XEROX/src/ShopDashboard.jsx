@@ -3,224 +3,326 @@ import React, { useState, useEffect } from 'react';
 function ShopDashboard() {
   const [orders, setOrders] = useState([]);
   const [isShopOpen, setIsShopOpen] = useState(true);
-  const [networkError, setNetworkError] = useState('');
-
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+  const [activeTab, setActiveTab] = useState('active'); // 'active' | 'ready' | 'archived'
+  const [screenshotModalUrl, setScreenshotModalUrl] = useState(null);
 
   const fetchData = async () => {
     try {
-      setNetworkError('');
-      const resOrders = await fetch(`${apiUrl}/api/orders`);
+      const resOrders = await fetch('http://localhost:5001/api/orders');
       const dataOrders = await resOrders.json();
       setOrders(dataOrders);
 
-      const resShop = await fetch(`${apiUrl}/api/shop/status`);
+      const resShop = await fetch('http://localhost:5001/api/shop/status');
       const dataShop = await resShop.json();
       setIsShopOpen(dataShop.isOpen);
     } catch (err) {
-      setNetworkError('Server unreachable. Reconnecting...');
+      console.error("Dashboard failed to fetch data:", err);
     }
   };
 
   useEffect(() => {
+    // Apply dark background to body for shop dashboard view
+    document.body.style.backgroundColor = '#121214';
+    document.body.style.color = '#f3f4f6';
+
     fetchData();
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
-  }, [apiUrl]);
+    const interval = setInterval(fetchData, 4000); // Poll faster (every 4s) on shopkeeper side
+
+    return () => {
+      // Restore default backgrounds
+      document.body.style.backgroundColor = '';
+      document.body.style.color = '';
+      clearInterval(interval);
+    };
+  }, []);
 
   const updateStatus = async (id, newStatus) => {
     try {
-      await fetch(`${apiUrl}/api/orders/${id}`, {
+      await fetch(`http://localhost:5001/api/orders/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
       });
       fetchData();
     } catch (err) {
-      alert("Failed to update status. Check your connection.");
+      alert("Failed to update status.");
     }
   };
 
   const toggleShop = async () => {
     try {
-      const res = await fetch(`${apiUrl}/api/shop/toggle`, { method: 'POST' });
+      const res = await fetch('http://localhost:5001/api/shop/toggle', { method: 'POST' });
       const data = await res.json();
       setIsShopOpen(data.isOpen);
     } catch (err) {
-      alert("Failed to toggle shop state.");
+      alert("Failed to toggle shop status.");
     }
   };
 
+  // Filter orders based on active tab
+  const activeOrders = orders.filter(o => o.status === 'Pending');
+  const readyOrders = orders.filter(o => o.status === 'Ready');
+  const archivedOrders = orders.filter(o => o.status === 'Picked Up');
+
+  const getOrdersForCurrentTab = () => {
+    if (activeTab === 'active') return activeOrders;
+    if (activeTab === 'ready') return readyOrders;
+    return archivedOrders;
+  };
+
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-color)', fontFamily: 'var(--font-family)' }}>
+    <div style={{ padding: '30px 20px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'sans-serif' }}>
       
-      {/* Dashboard Header */}
-      <header style={{ backgroundColor: 'var(--text-main)', color: 'white', padding: '1rem 2rem', position: 'sticky', top: 0, zIndex: 10, boxShadow: 'var(--shadow-md)' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <img src="/Profile.png" alt="XeroxIt" style={{ width: '32px', height: '32px' }} />
-            <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '600' }}>XeroxIt Admin</h1>
-          </div>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'rgba(255,255,255,0.1)', padding: '0.5rem 1rem', borderRadius: 'var(--radius-full)' }}>
-              <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: isShopOpen ? 'var(--success)' : 'var(--danger)', boxShadow: isShopOpen ? '0 0 10px var(--success)' : '0 0 10px var(--danger)' }}></span>
-              <span style={{ fontSize: '0.875rem', fontWeight: '500' }}>Status: {isShopOpen ? 'Accepting Orders' : 'Closed'}</span>
-            </div>
-            
-            <button 
-              onClick={toggleShop} 
-              className={isShopOpen ? 'btn btn-danger' : 'btn btn-success'}
-              style={{ padding: '0.5rem 1.5rem', fontSize: '0.875rem', borderRadius: 'var(--radius-full)' }}
-            >
-              {isShopOpen ? 'Close Shop' : 'Open Shop'}
-            </button>
-          </div>
+      {/* Dashboard Top Header */}
+      <div style={{ 
+        display: 'flex', 
+        flexWrap: 'wrap', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: '30px', 
+        padding: '20px 30px', 
+        backgroundColor: 'var(--dark-card)', 
+        border: '1px solid var(--dark-border)',
+        borderRadius: '12px',
+        boxShadow: 'var(--shadow-md)',
+        gap: '20px'
+      }} id="shop-header">
+        <div>
+          <h1 style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontSize: '2rem', fontWeight: 800 }}>
+            🏪 Shopkeeper Dashboard
+          </h1>
+          <p style={{ margin: '4px 0 0 0', color: 'var(--dark-text-muted)', fontSize: '14px' }}>
+            Manage campus print jobs and real-time shop availability.
+          </p>
         </div>
-      </header>
-
-      {/* Dashboard Main Content */}
-      <main style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
         
-        {networkError && (
-          <div className="animate-fade-in" style={{ padding: '1rem', marginBottom: '2rem', backgroundColor: 'var(--warning-bg)', color: 'var(--warning)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            {networkError}
-          </div>
-        )}
-
-        {/* Order Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
-          <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-             <div style={{ backgroundColor: 'var(--primary)', color: 'white', padding: '1rem', borderRadius: 'var(--radius-md)' }}>
-               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-             </div>
-             <div>
-               <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-muted)', fontWeight: '500' }}>Total Orders</p>
-               <h3 style={{ margin: 0, fontSize: '1.5rem' }}>{orders.length}</h3>
-             </div>
-          </div>
-          <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-             <div style={{ backgroundColor: 'var(--warning)', color: 'white', padding: '1rem', borderRadius: 'var(--radius-md)' }}>
-               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-             </div>
-             <div>
-               <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-muted)', fontWeight: '500' }}>Pending</p>
-               <h3 style={{ margin: 0, fontSize: '1.5rem' }}>{orders.filter(o => o.status === 'Pending').length}</h3>
-             </div>
-          </div>
-          <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-             <div style={{ backgroundColor: 'var(--success)', color: 'white', padding: '1rem', borderRadius: 'var(--radius-md)' }}>
-               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-             </div>
-             <div>
-               <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-muted)', fontWeight: '500' }}>Ready</p>
-               <h3 style={{ margin: 0, fontSize: '1.5rem' }}>{orders.filter(o => o.status === 'Ready').length}</h3>
-             </div>
-          </div>
+        {/* iOS style Toggle Switch */}
+        <div className="switch-container" id="shop-status-switch">
+          <span style={{ fontWeight: 600, fontSize: '15px', color: isShopOpen ? 'var(--success)' : 'var(--danger)' }}>
+            Shop is {isShopOpen ? 'OPEN' : 'CLOSED'}
+          </span>
+          <label className="switch">
+            <input 
+              type="checkbox" 
+              checked={isShopOpen} 
+              onChange={toggleShop} 
+              id="shop-toggle-input"
+            />
+            <span className="slider"></span>
+          </label>
         </div>
+      </div>
 
-        {/* Order Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
-          {orders.map(order => (
-            <div 
-              key={order._id} 
-              className="card animate-fade-in"
-              style={{ 
-                borderLeft: `4px solid ${order.status === 'Ready' ? 'var(--success)' : order.status === 'Picked Up' ? 'var(--text-muted)' : 'var(--warning)'}`,
-                opacity: order.status === 'Picked Up' ? 0.7 : 1,
-                display: 'flex',
-                flexDirection: 'column'
-              }}
-            >
-              
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                <div>
-                  <h3 style={{ margin: '0 0 0.25rem' }}>{order.studentName}</h3>
-                  <span className={`badge ${order.status === 'Ready' ? 'badge-success' : order.status === 'Picked Up' ? 'badge-secondary' : 'badge-warning'}`}>
-                    {order.status}
+      {/* Tabs Menu */}
+      <div className="shop-tabs" id="shop-tabs-navigation">
+        <button 
+          onClick={() => setActiveTab('active')} 
+          className={`shop-tab-btn ${activeTab === 'active' ? 'active' : ''}`}
+          id="tab-active-btn"
+        >
+          📥 Active Queue ({activeOrders.length})
+        </button>
+        <button 
+          onClick={() => setActiveTab('ready')} 
+          className={`shop-tab-btn ${activeTab === 'ready' ? 'active' : ''}`}
+          id="tab-ready-btn"
+        >
+          ✓ Ready for Pickup ({readyOrders.length})
+        </button>
+        <button 
+          onClick={() => setActiveTab('archived')} 
+          className={`shop-tab-btn ${activeTab === 'archived' ? 'active' : ''}`}
+          id="tab-archived-btn"
+        >
+          📦 Archive History ({archivedOrders.length})
+        </button>
+      </div>
+
+      {/* Orders Grid */}
+      <div 
+        style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', 
+          gap: '24px' 
+        }} 
+        id="shop-orders-grid"
+      >
+        {getOrdersForCurrentTab().map(order => (
+          <div key={order._id} className="shop-card" id={`order-${order.pickupCode}`}>
+            <div>
+              <div className="shop-card-header">
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>{order.studentName}</h3>
+                <span className="shop-code-badge">{order.pickupCode}</span>
+              </div>
+
+              <div style={{ margin: '14px 0', fontSize: '14px', color: '#e5e7eb' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                  <span className="shop-spec-badge">{order.copies} {order.copies === 1 ? 'copy' : 'copies'}</span>
+                  <span className="shop-spec-badge" style={{ color: order.isColor ? '#ffca28' : '#e0e0e0' }}>
+                    {order.isColor ? '🎨 Color' : '⚫ B&W'}
                   </span>
+                  <span className="shop-spec-badge" style={{ color: '#81c784' }}>₹{order.totalPaid} Paid</span>
                 </div>
-                <div style={{ backgroundColor: 'var(--primary)', color: 'white', padding: '0.25rem 0.75rem', borderRadius: 'var(--radius-sm)', fontWeight: '700', letterSpacing: '2px', fontSize: '1.25rem', boxShadow: 'var(--shadow-sm)' }}>
-                  {order.pickupCode}
-                </div>
-              </div>
-
-              <div style={{ backgroundColor: 'var(--bg-color)', padding: '1rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem', fontSize: '0.875rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Copies:</span>
-                  <strong style={{ color: 'var(--text-main)' }}>{order.copies}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Type:</span>
-                  <strong style={{ color: 'var(--text-main)' }}>{order.isColor ? 'Color (₹10)' : 'B&W (₹2)'}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Total Paid:</span>
-                  <strong style={{ color: 'var(--success)', fontSize: '1rem' }}>₹{order.totalPaid}</strong>
+                <div style={{ color: 'var(--dark-text-muted)', fontSize: '12px' }}>
+                  Submitted: {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
+            </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.5rem', marginTop: 'auto' }}>
+            <div style={{ marginTop: '10px' }}>
+              {/* Actions Section */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px' }}>
+                
+                {/* 📄 PDF Button */}
                 {order.pdfUrl && (
                   <a 
-                    href={order.pdfUrl} 
+                    href={`http://localhost:5001/uploads/${order.pdfUrl}`} 
                     target="_blank" 
                     rel="noreferrer"
-                    className="btn"
-                    style={{ backgroundColor: 'var(--primary)', color: 'white', padding: '0.5rem', fontSize: '0.875rem', textDecoration: 'none' }}
+                    style={{ 
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '10px', 
+                      backgroundColor: 'rgba(255, 255, 255, 0.08)', 
+                      borderRadius: '8px', 
+                      textDecoration: 'none', 
+                      color: '#6366f1', 
+                      fontWeight: 700, 
+                      fontSize: '14px',
+                      border: '1px solid rgba(99, 102, 241, 0.2)',
+                      transition: 'var(--transition)'
+                    }}
+                    className="shop-pdf-link"
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                    Print PDF
+                    📄 Open PDF Document
                   </a>
                 )}
 
+                {/* 💸 View Screenshot Modal Trigger */}
                 {order.paymentScreenshotUrl && (
-                  <a 
-                    href={order.paymentScreenshotUrl} 
-                    target="_blank" 
-                    rel="noreferrer"
-                    className="btn"
-                    style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-main)', border: '1px solid var(--border-color)', padding: '0.5rem', fontSize: '0.875rem', textDecoration: 'none' }}
+                  <button 
+                    onClick={() => setScreenshotModalUrl(`http://localhost:5001/uploads/${order.paymentScreenshotUrl}`)}
+                    style={{ 
+                      padding: '10px', 
+                      backgroundColor: 'rgba(16, 185, 129, 0.1)', 
+                      borderRadius: '8px', 
+                      color: '#10b981', 
+                      fontWeight: 700, 
+                      fontSize: '14px', 
+                      border: '1px solid rgba(16, 185, 129, 0.2)',
+                      cursor: 'pointer',
+                      transition: 'var(--transition)'
+                    }}
+                    className="shop-screenshot-btn"
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-                    Payment
-                  </a>
+                    💸 View Payment Screenshot
+                  </button>
                 )}
               </div>
 
+              {/* Status Action Buttons */}
               {order.status === 'Pending' && (
                 <button 
                   onClick={() => updateStatus(order._id, 'Ready')} 
-                  className="btn btn-success w-full"
+                  className="btn btn-success"
+                  id={`mark-ready-${order.pickupCode}`}
                 >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}><polyline points="20 6 9 17 4 12"/></svg>
-                  Mark as Ready
+                  ✓ Print Done (Mark Ready)
                 </button>
               )}
 
               {order.status === 'Ready' && (
                 <button 
                   onClick={() => updateStatus(order._id, 'Picked Up')} 
-                  className="btn btn-secondary w-full"
+                  className="btn btn-primary"
+                  style={{ backgroundColor: '#4f46e5' }}
+                  id={`mark-pickup-${order.pickupCode}`}
                 >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}><path d="m7 17-4.2-4.2a2 2 0 0 1 0-2.8l2.8-2.8a2 2 0 0 1 2.8 0L12 11"/><path d="m11 21-4.2-4.2a2 2 0 0 1 0-2.8l2.8-2.8a2 2 0 0 1 2.8 0L17 16"/><path d="m21 7-4.2-4.2a2 2 0 0 0-2.8 0l-2.8 2.8a2 2 0 0 0 0 2.8L16 13"/></svg>
-                  Student Picked Up
+                  📦 Student Picked Up
                 </button>
               )}
+
+              {order.status === 'Picked Up' && (
+                <div style={{ 
+                  textAlign: 'center', 
+                  padding: '8px', 
+                  backgroundColor: 'rgba(255, 255, 255, 0.03)', 
+                  border: '1px solid var(--dark-border)',
+                  borderRadius: '6px',
+                  color: 'var(--dark-text-muted)',
+                  fontSize: '13px',
+                  fontWeight: 600
+                }}>
+                  ✅ Order Completed & Archived
+                </div>
+              )}
             </div>
-          ))}
-          
-          {orders.length === 0 && !networkError && (
-             <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 1rem', display: 'block', opacity: 0.5 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                <p>No orders found. Waiting for new prints...</p>
-             </div>
-          )}
+          </div>
+        ))}
+      </div>
+
+      {/* Empty State */}
+      {getOrdersForCurrentTab().length === 0 && (
+        <div style={{ 
+          textAlign: 'center', 
+          padding: '60px 20px', 
+          backgroundColor: 'var(--dark-card)', 
+          border: '1px dashed var(--dark-border)',
+          borderRadius: '12px',
+          color: 'var(--dark-text-muted)' 
+        }} id="empty-state-container">
+          <div style={{ fontSize: '40px', marginBottom: '10px' }}>📭</div>
+          <h3>No orders in this section</h3>
+          <p style={{ fontSize: '14px', marginTop: '4px' }}>New orders will automatically appear here as they are placed.</p>
         </div>
-        
-      </main>
+      )}
+
+      {/* 💸 INLINE PAYMENT SCREENSHOT MODAL OVERLAY */}
+      {screenshotModalUrl && (
+        <div 
+          className="modal-overlay" 
+          onClick={() => setScreenshotModalUrl(null)}
+          id="screenshot-modal-overlay"
+        >
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button 
+              className="modal-close-btn" 
+              onClick={() => setScreenshotModalUrl(null)}
+              id="close-screenshot-modal"
+            >
+              &times;
+            </button>
+            <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.2rem', marginBottom: '15px', color: 'white' }}>
+              Payment Screenshot Verification
+            </h3>
+            <img 
+              src={screenshotModalUrl} 
+              alt="Payment Screenshot" 
+              className="modal-img" 
+              id="screenshot-modal-img"
+            />
+            <div style={{ marginTop: '15px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <a 
+                href={screenshotModalUrl} 
+                target="_blank" 
+                rel="noreferrer"
+                className="btn btn-outline"
+                style={{ width: 'auto', padding: '8px 16px', fontSize: '13px', color: 'white', border: '1px solid var(--dark-border)' }}
+              >
+                🔗 Open in New Tab
+              </a>
+              <button 
+                onClick={() => setScreenshotModalUrl(null)} 
+                className="btn btn-primary"
+                style={{ width: 'auto', padding: '8px 16px', fontSize: '13px' }}
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
