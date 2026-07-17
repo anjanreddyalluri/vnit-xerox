@@ -13,6 +13,12 @@ app.use(cors());
 app.use(express.json());
 
 const crypto = require('crypto');
+const fs = require('fs');
+
+// Ensure uploads directory exists
+if (!fs.existsSync('uploads')) {
+    fs.mkdirSync('uploads');
+}
 
 // 📁 Multer setup
 const storage = multer.diskStorage({
